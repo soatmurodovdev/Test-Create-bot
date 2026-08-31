@@ -1,4 +1,5 @@
 import os
+import asyncio
 import logging
 import tempfile
 
@@ -136,7 +137,10 @@ async def on_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await tg_file.download_to_drive(tmp_path)
 
     try:
-        text = file_parser.extract_text(tmp_path, ext)
+        # Katta fayllarni o'qish sekin bo'lishi mumkin — bu botning boshqa
+        # so'rovlarga javob berishini to'sib qo'ymasligi uchun alohida
+        # oqimda (thread) bajaramiz.
+        text = await asyncio.to_thread(file_parser.extract_text, tmp_path, ext)
     except Exception as e:
         logger.exception("File parse error")
         await status_msg.edit_text(tr(context, user_id, "parse_error", error=str(e)))
@@ -203,7 +207,10 @@ async def run_analysis(update: Update, context: ContextTypes.DEFAULT_TYPE, statu
     text = context.user_data["raw_text"]
 
     try:
-        analysis = ai_service.analyze_text(text, lang)
+        # AI so'rovi bir necha soniya (ba'zan ko'proq) davom etishi mumkin —
+        # bu botning boshqa foydalanuvchilarga/buyruqlarga javob berishini
+        # to'smasligi uchun alohida oqimda bajaramiz.
+        analysis = await asyncio.to_thread(ai_service.analyze_text, text, lang)
     except Exception as e:
         logger.exception("AI analyze error")
         await status_msg.edit_text(tr(context, user_id, "ai_error", error=str(e)))
@@ -345,7 +352,9 @@ async def handle_fmt(update: Update, context: ContextTypes.DEFAULT_TYPE, fmt: st
     scope_detail = context.user_data.get("scope_detail", "")
 
     try:
-        result = ai_service.generate_quiz(text, lang, qty, fmt, scope_note=scope_detail)
+        result = await asyncio.to_thread(
+            ai_service.generate_quiz, text, lang, qty, fmt, scope_note=scope_detail
+        )
     except Exception as e:
         logger.exception("AI generate error")
         await query.edit_message_text(tr(context, user_id, "ai_error", error=str(e)))
@@ -398,7 +407,9 @@ async def handle_output(update: Update, context: ContextTypes.DEFAULT_TYPE, fmt:
     else:
         with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
             path = tmp.name
-        build_quiz_docx(questions, path, title=tr(context, user_id, "quiz_title"))
+        await asyncio.to_thread(
+            build_quiz_docx, questions, path, title=tr(context, user_id, "quiz_title")
+        )
         with open(path, "rb") as f:
             await query.message.reply_document(f, filename="test.docx")
         os.remove(path)
