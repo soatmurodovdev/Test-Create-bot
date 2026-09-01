@@ -26,7 +26,7 @@ except RuntimeError:
 
 
 def build_app() -> Application:
-    app = Application.builder().token(BOT_TOKEN).build()
+    app = Application.builder().token(BOT_TOKEN).concurrent_updates(True).build()
 
     app.add_handler(CommandHandler("start", handlers.start))
     app.add_handler(CommandHandler("admin", handlers.admin_panel))

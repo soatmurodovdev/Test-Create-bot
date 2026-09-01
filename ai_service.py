@@ -42,7 +42,7 @@ def _ask_json(system_prompt: str, user_prompt: str, max_tokens: int = 4000) -> d
         text = text.strip("`")
         if text.lower().startswith("json"):
             text = text[4:]
-    return json.loads(text)
+    return json.loads(text, strict=False)
 
 
 def analyze_text(text: str, language: str = "uz") -> dict:
@@ -78,11 +78,19 @@ MATN:
     return _ask_json(system, user, max_tokens=1500)
 
 
+_DIFFICULTY_HINTS = {
+    "easy": "Savollar OSON darajada bo'lsin — asosiy tushunchalar, to'g'ridan-to'g'ri matndan topiladigan faktlar. Chalg'ituvchi variantlar aniq noto'g'ri bo'lsin.",
+    "medium": "Savollar O'RTA darajada bo'lsin — tushunish va oddiy tahlil talab qiladigan, matn mazmunini bog'lay oladigan savollar.",
+    "hard": "Savollar QIYIN darajada bo'lsin — chuqur tahlil, taqqoslash yoki xulosa chiqarishni talab qiladigan savollar. Chalg'ituvchi variantlar ishonchli va yaqin bo'lsin.",
+}
+
+
 def generate_quiz(text: str, language: str, question_count: int,
-                   answer_format: str, scope_note: str = "") -> dict:
+                   answer_format: str, scope_note: str = "", difficulty: str = "medium") -> dict:
     """
     answer_format: 'AB', 'ABC' yoki 'ABCD'
     scope_note: masalan 'faqat 45-50 betlar' yoki 'faqat "Fotosintez" mavzusi'
+    difficulty: 'easy', 'medium' yoki 'hard'
     Qaytaradi: {"questions": [{"question": ..., "options": {...}, "correct": "A"}, ...]}
     """
     system = (
@@ -91,13 +99,18 @@ def generate_quiz(text: str, language: str, question_count: int,
         "izoh yozmang."
     )
     n_options = len(answer_format)
-    user = f"""Til: {language}
+    difficulty_hint = _DIFFICULTY_HINTS.get(difficulty, _DIFFICULTY_HINTS["medium"])
+    user = f"""MUHIM: Savollarni MATN qaysi tilda yozilgan bo'lsa, aynan SHU TILDA tuzing
+(tilni matnning o'zidan avtomatik aniqlang). Foydalanuvchi interfeys tiliga ({language})
+E'TIBOR BERMANG — faqat quyidagi MATN tiliga qarang.
 Kerakli savollar soni: {question_count}
 Javob variantlari formati: {answer_format} ({n_options} ta variant)
 Qamrov: {scope_note or "butun matn"}
+Qiyinlik darajasi: {difficulty_hint}
 
 Har bir savol uchun {n_options} ta variant bering, ulardan faqat bittasi to'g'ri bo'lsin.
-Savollar matnga asoslangan, aniq, tushunarli va xilma-xil qiyinlikda bo'lsin.
+Savollar matnga asoslangan, aniq, tushunarli bo'lsin va yuqorida ko'rsatilgan qiyinlik
+darajasiga izchil rioya qiling.
 
 JSON format:
 {{

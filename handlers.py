@@ -2,14 +2,16 @@ import os
 import asyncio
 import logging
 import tempfile
+import datetime
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+from telegram.error import BadRequest
 
 import database
 import file_parser
 import ai_service
-from export_docx import build_quiz_docx
+import branded_output
 from locales import T
 from config import ADMIN_ID, SUPPORT_USERNAME, MAX_FILE_SIZE_MB, TEMP_MESSAGE_TTL
 
@@ -79,7 +81,12 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    try:
+        await query.answer()
+    except BadRequest as e:
+        if "Query is too old" not in str(e):
+            raise
+        return
     data = query.data
     user_id = update.effective_user.id
 
@@ -94,10 +101,24 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await ask_quantity_edit(query, context, user_id)
     elif data.startswith("qty:"):
         await handle_qty(update, context, data.split(":", 1)[1])
+    elif data.startswith("diff:"):
+        await handle_difficulty(update, context, data.split(":", 1)[1])
     elif data.startswith("fmt:"):
         await handle_fmt(update, context, data.split(":", 1)[1])
-    elif data.startswith("output:"):
-        await handle_output(update, context, data.split(":", 1)[1])
+    elif data.startswith("content:"):
+        await handle_content(update, context, data.split(":", 1)[1])
+    elif data.startswith("out:"):
+        _, content, fmt = data.split(":", 2)
+        await handle_output(update, context, content, fmt)
+    elif data == "regen":
+        await handle_regenerate(update, context)
+    elif data == "back_to_content":
+        query2 = update.callback_query
+        questions = context.user_data.get("quiz_result", [])
+        if questions:
+            await show_content_choice(query2, context, user_id, len(questions))
+        else:
+            await query2.edit_message_text(tr(context, user_id, "nothing_to_export"))
     elif data == "back":
         await handle_back(update, context)
     elif data.startswith("admin:"):
@@ -174,7 +195,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         txt = update.message.text.strip()
         if txt.isdigit() and int(txt) > 0:
             context.user_data["awaiting_custom_qty"] = False
-            await set_quantity_and_ask_format(update, context, int(txt))
+            await set_quantity_and_ask_difficulty(update, context, int(txt))
         else:
             await update.message.reply_text(tr(context, user_id, "invalid_number"))
         return
@@ -305,6 +326,16 @@ async def ask_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+def _difficulty_buttons(context, user_id):
+    return [
+        [
+            InlineKeyboardButton(tr(context, user_id, "diff_easy"), callback_data="diff:easy"),
+            InlineKeyboardButton(tr(context, user_id, "diff_medium"), callback_data="diff:medium"),
+            InlineKeyboardButton(tr(context, user_id, "diff_hard"), callback_data="diff:hard"),
+        ]
+    ]
+
+
 async def handle_qty(update: Update, context: ContextTypes.DEFAULT_TYPE, val: str):
     query = update.callback_query
     user_id = query.from_user.id
@@ -313,6 +344,29 @@ async def handle_qty(update: Update, context: ContextTypes.DEFAULT_TYPE, val: st
         await query.edit_message_text(tr(context, user_id, "enter_custom_qty"))
         return
     context.user_data["question_count"] = int(val)
+    await query.edit_message_text(
+        tr(context, user_id, "choose_difficulty"),
+        reply_markup=InlineKeyboardMarkup(_difficulty_buttons(context, user_id)),
+    )
+
+
+async def set_quantity_and_ask_difficulty(update: Update, context: ContextTypes.DEFAULT_TYPE, qty: int):
+    user_id = update.effective_user.id
+    context.user_data["question_count"] = qty
+    await update.message.reply_text(
+        tr(context, user_id, "choose_difficulty"),
+        reply_markup=InlineKeyboardMarkup(_difficulty_buttons(context, user_id)),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Difficulty selection -> answer format
+# ---------------------------------------------------------------------------
+
+async def handle_difficulty(update: Update, context: ContextTypes.DEFAULT_TYPE, diff: str):
+    query = update.callback_query
+    user_id = query.from_user.id
+    context.user_data["difficulty"] = diff
     buttons = [
         [
             InlineKeyboardButton("AB", callback_data="fmt:AB"),
@@ -323,37 +377,25 @@ async def handle_qty(update: Update, context: ContextTypes.DEFAULT_TYPE, val: st
     await query.edit_message_text(tr(context, user_id, "choose_answer_format"), reply_markup=InlineKeyboardMarkup(buttons))
 
 
-async def set_quantity_and_ask_format(update: Update, context: ContextTypes.DEFAULT_TYPE, qty: int):
-    user_id = update.effective_user.id
-    context.user_data["question_count"] = qty
-    buttons = [
-        [
-            InlineKeyboardButton("AB", callback_data="fmt:AB"),
-            InlineKeyboardButton("ABC", callback_data="fmt:ABC"),
-            InlineKeyboardButton("ABCD", callback_data="fmt:ABCD"),
-        ]
-    ]
-    await update.message.reply_text(tr(context, user_id, "choose_answer_format"), reply_markup=InlineKeyboardMarkup(buttons))
-
-
 # ---------------------------------------------------------------------------
 # Answer format + generation
 # ---------------------------------------------------------------------------
 
-async def handle_fmt(update: Update, context: ContextTypes.DEFAULT_TYPE, fmt: str):
-    query = update.callback_query
-    user_id = query.from_user.id
-    context.user_data["answer_format"] = fmt
-    await query.edit_message_text(tr(context, user_id, "generating"))
+async def _run_generation(query, context, user_id, is_regen=False):
+    key = "regenerating" if is_regen else "generating"
+    await query.edit_message_text(tr(context, user_id, key))
 
     lang = lang_of(context, user_id)
     text = context.user_data.get("raw_text", "")
     qty = context.user_data.get("question_count", 10)
+    fmt = context.user_data.get("answer_format", "ABCD")
+    difficulty = context.user_data.get("difficulty", "medium")
     scope_detail = context.user_data.get("scope_detail", "")
 
     try:
         result = await asyncio.to_thread(
-            ai_service.generate_quiz, text, lang, qty, fmt, scope_note=scope_detail
+            ai_service.generate_quiz, text, lang, qty, fmt,
+            scope_note=scope_detail, difficulty=difficulty,
         )
     except Exception as e:
         logger.exception("AI generate error")
@@ -366,25 +408,128 @@ async def handle_fmt(update: Update, context: ContextTypes.DEFAULT_TYPE, fmt: st
         return
 
     context.user_data["quiz_result"] = questions
-    database.log_quiz(user_id, len(questions), context.user_data.get("source_type", "matn"))
+    database.log_quiz(user_id, len(questions), context.user_data.get("source_type", "matn"), difficulty)
 
+    await show_content_choice(query, context, user_id, len(questions))
+
+
+async def handle_fmt(update: Update, context: ContextTypes.DEFAULT_TYPE, fmt: str):
+    query = update.callback_query
+    user_id = query.from_user.id
+    context.user_data["answer_format"] = fmt
+    await _run_generation(query, context, user_id, is_regen=False)
+
+
+async def handle_regenerate(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = query.from_user.id
+    if not context.user_data.get("raw_text"):
+        await query.edit_message_text(tr(context, user_id, "nothing_to_export"))
+        return
+    await _run_generation(query, context, user_id, is_regen=True)
+
+
+async def show_content_choice(query, context, user_id, count):
     buttons = [
         [
-            InlineKeyboardButton(tr(context, user_id, "output_text"), callback_data="output:text"),
-            InlineKeyboardButton(tr(context, user_id, "output_docx"), callback_data="output:docx"),
-        ]
+            InlineKeyboardButton(tr(context, user_id, "content_questions"), callback_data="content:questions"),
+            InlineKeyboardButton(tr(context, user_id, "content_answers"), callback_data="content:answers"),
+        ],
+        [InlineKeyboardButton(tr(context, user_id, "content_both"), callback_data="content:both")],
+        [InlineKeyboardButton(tr(context, user_id, "regenerate_btn"), callback_data="regen")],
+    ]
+    try:
+        await query.edit_message_text(
+            tr(context, user_id, "generated_ok", count=count),
+            reply_markup=InlineKeyboardMarkup(buttons),
+        )
+    except BadRequest as e:
+        if "Message is not modified" not in str(e):
+            raise
+
+
+# ---------------------------------------------------------------------------
+# Content type (savollar / javoblar / ikkalasi) -> output format
+# ---------------------------------------------------------------------------
+
+async def handle_content(update: Update, context: ContextTypes.DEFAULT_TYPE, content: str):
+    query = update.callback_query
+    user_id = query.from_user.id
+    if not context.user_data.get("quiz_result"):
+        await query.edit_message_text(tr(context, user_id, "nothing_to_export"))
+        return
+    context.user_data["pending_content"] = content
+    buttons = [
+        [
+            InlineKeyboardButton(tr(context, user_id, "output_text"), callback_data=f"out:{content}:text"),
+            InlineKeyboardButton(tr(context, user_id, "output_docx"), callback_data=f"out:{content}:docx"),
+            InlineKeyboardButton(tr(context, user_id, "output_pdf"), callback_data=f"out:{content}:pdf"),
+        ],
+        [InlineKeyboardButton(tr(context, user_id, "back_btn"), callback_data="back_to_content")],
     ]
     await query.edit_message_text(
-        tr(context, user_id, "generated_ok", count=len(questions)),
+        tr(context, user_id, "choose_output_format"),
         reply_markup=InlineKeyboardMarkup(buttons),
     )
 
 
 # ---------------------------------------------------------------------------
-# Output (text / docx)
+# Output (matn / docx / pdf) — savollar, javoblar yoki ikkalasi
 # ---------------------------------------------------------------------------
 
-async def handle_output(update: Update, context: ContextTypes.DEFAULT_TYPE, fmt: str):
+def _build_meta(context, user_id, count):
+    lang = lang_of(context, user_id)
+    return {
+        "subtitle": context.user_data.get("scope_detail", "") or tr(context, user_id, "quiz_title"),
+        "difficulty": context.user_data.get("difficulty", "medium"),
+        "count": count,
+        "date": datetime.datetime.now().strftime("%d.%m.%Y"),
+        "lang": lang,
+    }
+
+
+async def _send_questions(query, questions, meta, fmt, label):
+    if fmt == "text":
+        text = branded_output.build_questions_text(questions, meta, tr_label=label)
+        for start in range(0, len(text), 3800):
+            await query.message.reply_text(text[start:start + 3800])
+    elif fmt == "docx":
+        with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
+            path = tmp.name
+        await asyncio.to_thread(branded_output.build_questions_docx, questions, path, meta)
+        with open(path, "rb") as f:
+            await query.message.reply_document(f, filename="test_savollar.docx")
+        os.remove(path)
+    elif fmt == "pdf":
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            path = tmp.name
+        await asyncio.to_thread(branded_output.build_pdf, questions, path, meta, "questions")
+        with open(path, "rb") as f:
+            await query.message.reply_document(f, filename="test_savollar.pdf")
+        os.remove(path)
+
+
+async def _send_answers(query, questions, meta, fmt, label):
+    if fmt == "text":
+        text = branded_output.build_answers_text(questions, meta, tr_label=label)
+        await query.message.reply_text(text)
+    elif fmt == "docx":
+        with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
+            path = tmp.name
+        await asyncio.to_thread(branded_output.build_answers_docx, questions, path, meta)
+        with open(path, "rb") as f:
+            await query.message.reply_document(f, filename="test_javoblar.docx")
+        os.remove(path)
+    elif fmt == "pdf":
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            path = tmp.name
+        await asyncio.to_thread(branded_output.build_pdf, questions, path, meta, "answers")
+        with open(path, "rb") as f:
+            await query.message.reply_document(f, filename="test_javoblar.pdf")
+        os.remove(path)
+
+
+async def handle_output(update: Update, context: ContextTypes.DEFAULT_TYPE, content: str, fmt: str):
     query = update.callback_query
     user_id = query.from_user.id
     questions = context.user_data.get("quiz_result", [])
@@ -392,27 +537,18 @@ async def handle_output(update: Update, context: ContextTypes.DEFAULT_TYPE, fmt:
         await query.edit_message_text(tr(context, user_id, "nothing_to_export"))
         return
 
-    if fmt == "text":
-        lines = []
-        for i, q in enumerate(questions, start=1):
-            lines.append(f"{i}. {q['question']}")
-            for k, v in q["options"].items():
-                lines.append(f"   {k}) {v}")
-        answers = ", ".join(f"{i + 1}-{q['correct']}" for i, q in enumerate(questions))
-        lines.append("")
-        lines.append(tr(context, user_id, "answers_label") + ": " + answers)
-        full = "\n".join(lines)
-        for start in range(0, len(full), 3800):
-            await query.message.reply_text(full[start:start + 3800])
-    else:
-        with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
-            path = tmp.name
-        await asyncio.to_thread(
-            build_quiz_docx, questions, path, title=tr(context, user_id, "quiz_title")
-        )
-        with open(path, "rb") as f:
-            await query.message.reply_document(f, filename="test.docx")
-        os.remove(path)
+    meta = _build_meta(context, user_id, len(questions))
+    q_label = tr(context, user_id, "label_questions")
+    a_label = tr(context, user_id, "label_answers")
+
+    if content in ("questions", "both"):
+        await _send_questions(query, questions, meta, fmt, q_label)
+    if content in ("answers", "both"):
+        await _send_answers(query, questions, meta, fmt, a_label)
+
+    # Natija yuborilgach, foydalanuvchi yana boshqa format/kontent tanlashi
+    # yoki qayta generatsiya qilishi mumkin bo'lgan menyuni qayta ko'rsatamiz.
+    await show_content_choice(query, context, user_id, len(questions))
 
 
 # ---------------------------------------------------------------------------
@@ -449,7 +585,7 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
             f"🟢 Bugun faol: {s['active_today']}\n\n"
             f"🏆 Top foydalanuvchilar:\n{top}"
         )
-        await query.edit_message_text(text, parse_mode="Markdown")
+        await query.edit_message_text(text)
     elif action == "users":
         ids = database.all_user_ids()
         await query.edit_message_text(f"👥 Jami {len(ids)} ta foydalanuvchi ro'yxatdan o'tgan.")
