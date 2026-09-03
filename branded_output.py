@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 # Murodjon Soatmurodov tomonidan yaratilgan
+=======
+>>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 """
 Test natijalarini (savollar / javoblar) chiroyli, brendlangan ko'rinishda
 chiqarish uchun modul. Uchta format qo'llab-quvvatlanadi: matn, DOCX, PDF.

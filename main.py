@@ -1,12 +1,19 @@
+<<<<<<< HEAD
 # Murodjon Soatmurodov tomonidan yaratilgan
+=======
+>>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 import asyncio
 import logging
 import os
 
+<<<<<<< HEAD
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler, MessageHandler,
     PreCheckoutQueryHandler, filters,
 )
+=======
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
+>>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 
 from config import BOT_TOKEN
 import database
@@ -30,7 +37,11 @@ except RuntimeError:
 
 
 def build_app() -> Application:
+<<<<<<< HEAD
     app = Application.builder().token(BOT_TOKEN).build()
+=======
+    app = Application.builder().token(BOT_TOKEN).concurrent_updates(True).build()
+>>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 
     app.add_handler(CommandHandler("start", handlers.start))
     app.add_handler(CommandHandler("admin", handlers.admin_panel))
@@ -41,10 +52,13 @@ def build_app() -> Application:
     app.add_handler(MessageHandler(filters.Document.ALL, handlers.on_document))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.on_text))
 
+<<<<<<< HEAD
     # --- V3: Telegram Stars to'lovlari ---
     app.add_handler(PreCheckoutQueryHandler(handlers.precheckout_handler))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, handlers.successful_payment_handler))
 
+=======
+>>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     return app
 
 
@@ -59,7 +73,11 @@ def main():
 
     if not use_webhook:
         logging.info("Bot POLLING rejimida ishga tushdi...")
+<<<<<<< HEAD
         app.run_polling(allowed_updates=["message", "callback_query", "pre_checkout_query"])
+=======
+        app.run_polling(allowed_updates=["message", "callback_query"])
+>>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
         return
 
     # --- Webhook rejimi (Render uchun) ---
@@ -87,7 +105,11 @@ def main():
         port=port,
         url_path=url_path,
         webhook_url=webhook_url,
+<<<<<<< HEAD
         allowed_updates=["message", "callback_query", "pre_checkout_query"],
+=======
+        allowed_updates=["message", "callback_query"],
+>>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     )
 
 
