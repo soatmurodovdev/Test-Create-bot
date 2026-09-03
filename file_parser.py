@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 # Murodjon Soatmurodov tomonidan yaratilgan
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 """
 Turli fayl formatlaridan matnni ajratib olish uchun modul.
 Qo'llab-quvvatlanadi: PDF, DOCX, XLSX/XLS, TXT, CSV, RTF, PPTX, EPUB

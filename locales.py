@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 # Murodjon Soatmurodov tomonidan yaratilgan
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 T = {
     "uz": {
         "welcome": (
@@ -62,7 +59,6 @@ T = {
         "quiz_title": "Test",
         "cancelled": "🚫 Bekor qilindi. Yangi fayl yoki matn yuborishingiz mumkin.",
         "back_btn": "⬅️ Orqaga",
-<<<<<<< HEAD
         "menu_btn": "🏠 Asosiy menyu",
         "main_menu_title": "🏠 Asosiy menyu\n\nNima qilmoqchisiz?",
         "menu_test": "📝 Test tuzish",
@@ -114,8 +110,6 @@ T = {
         ),
         "admin_promo_created": "✅ Promokod yaratildi: {code} ({plan}, {uses} marta ishlatiladi)",
         "admin_promo_invalid": "❌ Noto'g'ri format. Masalan: SALOM2026 monthly 10",
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     },
     "ru": {
         "welcome": (
@@ -176,7 +170,6 @@ T = {
         "quiz_title": "Тест",
         "cancelled": "🚫 Отменено. Можете отправить новый файл или текст.",
         "back_btn": "⬅️ Назад",
-<<<<<<< HEAD
         "menu_btn": "🏠 Главное меню",
         "main_menu_title": "🏠 Главное меню\n\nЧто хотите сделать?",
         "menu_test": "📝 Составить тест",
@@ -228,8 +221,6 @@ T = {
         ),
         "admin_promo_created": "✅ Промокод создан: {code} ({plan}, {uses} использований)",
         "admin_promo_invalid": "❌ Неверный формат. Например: SALOM2026 monthly 10",
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     },
     "en": {
         "welcome": (
@@ -290,7 +281,6 @@ T = {
         "quiz_title": "Quiz",
         "cancelled": "🚫 Cancelled. You can send a new file or text.",
         "back_btn": "⬅️ Back",
-<<<<<<< HEAD
         "menu_btn": "🏠 Main menu",
         "main_menu_title": "🏠 Main menu\n\nWhat would you like to do?",
         "menu_test": "📝 Create a test",
@@ -342,7 +332,5 @@ T = {
         ),
         "admin_promo_created": "✅ Promo code created: {code} ({plan}, {uses} uses)",
         "admin_promo_invalid": "❌ Invalid format. Example: SALOM2026 monthly 10",
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     },
 }

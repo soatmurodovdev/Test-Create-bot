@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Murodjon Soatmurodov tomonidan yaratilgan
 """
 Ma'lumotlar bazasi qatlami — Turso (libSQL) orqali.
@@ -9,28 +8,6 @@ turgan production bazaga ega bo'lgani uchun (V2), yangi ustunlar oddiy
 CREATE TABLE bilan emas, xavfsiz "ustun bormi-yo'qmi" tekshiruvi orqali
 (ALTER TABLE ... ADD COLUMN) qo'shiladi — shunday qilib eski
 foydalanuvchilar ma'lumoti YO'QOLMAYDI.
-=======
-"""
-Ma'lumotlar bazasi qatlami — Turso (libSQL) orqali.
-
-MUHIM: Bu modul avvalgi sqlite3 asosidagi database.py o'rniga yozildi, LEKIN
-jadval va ustun nomlari ATAYLAB bir xil qoldirildi (users.language,
-users.tests_generated, users.joined_at/last_active, va h.k.) — shunday qilib
-handlers.py va admin panel hech qanday o'zgarishsiz ishlayveradi.
-
-Sabab: Render.com bepul tarifida disk VAQTINCHALIK (ephemeral) — bot
-uxlab-uyg'onganda yoki qayta deploy qilinganda oddiy .db fayli butunlay
-tozalanadi, shuning uchun statistika doim bo'sh chiqar edi.
-
-Yechim: shu bir xil kod...
-  - Termux'da (test uchun) LOKAL faylga ulanadi (TURSO_URL="file:testbot.db"
-    — hech qanday internet yoki akkaunt kerak emas, oddiy SQLite kabi),
-  - Render'da esa TURSO_URL/TURSO_AUTH_TOKEN orqali Turso bulutidagi doimiy
-    bazaga ulanadi — ma'lumotlar hech qachon o'chmaydi.
-
-`libsql-client` sof Python kutubxona (Rust/kompilyatsiya talab qilmaydi),
-shuning uchun Termux'da muammosiz o'rnatiladi.
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 """
 import logging
 import datetime
@@ -43,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 _client = None
 
-<<<<<<< HEAD
 DAILY_FREE_LIMIT = 2
 BONUS_PER_REFERRAL = 2
 BONUS_VALID_DAYS = 7
@@ -51,8 +27,6 @@ BONUS_VALID_DAYS = 7
 PLAN_DAYS = {"weekly": 7, "monthly": 30, "yearly": 365}
 PLAN_STARS = {"weekly": 50, "monthly": 150, "yearly": 1750}
 
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 
 def _get_client():
     global _client
@@ -68,7 +42,6 @@ def _now():
     return datetime.datetime.utcnow().isoformat()
 
 
-<<<<<<< HEAD
 def _today():
     return datetime.datetime.utcnow().strftime("%Y-%m-%d")
 
@@ -88,8 +61,6 @@ def _ensure_column(c, table, column, ddl):
 # init
 # ---------------------------------------------------------------------------
 
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 def init_db():
     c = _get_client()
     c.execute("""
@@ -113,7 +84,6 @@ def init_db():
             created_at TEXT
         )
     """)
-<<<<<<< HEAD
 
     # --- V3 uchun xavfsiz migratsiya (mavjud jadvalni buzmaydi) ---
     _ensure_column(c, "users", "subscription_plan", "TEXT DEFAULT 'none'")
@@ -160,11 +130,6 @@ def init_db():
 # Users (V2'dan o'zgarishsiz)
 # ---------------------------------------------------------------------------
 
-=======
-    logger.info("Baza tayyor: %s", TURSO_URL)
-
-
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 def upsert_user(user_id, username, full_name, language=None):
     c = _get_client()
     now = _now()
@@ -198,10 +163,7 @@ def get_language(user_id):
 
 
 def log_quiz(user_id, question_count, source_type, difficulty=None):
-<<<<<<< HEAD
     """Faqat statistik yozuv (admin panel uchun) — kvotaga tegmaydi."""
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     c = _get_client()
     now = _now()
     c.execute(
@@ -218,11 +180,7 @@ def get_stats():
     c = _get_client()
     total_users = c.execute("SELECT COUNT(*) FROM users").rows[0][0] or 0
     total_tests = c.execute("SELECT COUNT(*) FROM quiz_log").rows[0][0] or 0
-<<<<<<< HEAD
     today = _today()
-=======
-    today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     active_today = c.execute(
         "SELECT COUNT(*) FROM users WHERE last_active LIKE ?", [f"{today}%"]
     ).rows[0][0] or 0
@@ -233,21 +191,15 @@ def get_stats():
     top_users = [
         {"user_id": r[0], "username": r[1], "tests_generated": r[2]} for r in top_rs.rows
     ]
-<<<<<<< HEAD
     total_stars = c.execute(
         "SELECT COALESCE(SUM(stars_amount), 0) FROM payments"
     ).rows[0][0] or 0
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     return {
         "total_users": total_users,
         "total_tests": total_tests,
         "active_today": active_today,
         "top_users": top_users,
-<<<<<<< HEAD
         "total_stars": total_stars,
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     }
 
 
@@ -255,7 +207,6 @@ def all_user_ids():
     c = _get_client()
     rs = c.execute("SELECT user_id FROM users")
     return [row[0] for row in rs.rows]
-<<<<<<< HEAD
 
 
 # ---------------------------------------------------------------------------
@@ -513,5 +464,3 @@ def redeem_promo_code(code, user_id):
         [code, user_id, _now()],
     )
     return True, "ok", plan
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5

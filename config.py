@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 # Murodjon Soatmurodov tomonidan yaratilgan
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 import os
 
 # --- Telegram ---
@@ -13,11 +10,8 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "@murodjon_soatmurodov")
-<<<<<<< HEAD
 # Referral havolalari uchun (masalan: t.me/TestCreateAi_bot?start=ref_123)
 BOT_USERNAME = os.getenv("BOT_USERNAME", "TestCreateAi_bot")
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 
 # --- Google Gemini API (AI) ---
 # Bepul API kalitni https://aistudio.google.com dan oling (karta shart emas)

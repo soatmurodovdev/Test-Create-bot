@@ -1,32 +1,19 @@
-<<<<<<< HEAD
 # Murodjon Soatmurodov tomonidan yaratilgan
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 import os
 import asyncio
 import logging
 import tempfile
 import datetime
 
-<<<<<<< HEAD
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
 from telegram.ext import ContextTypes
-=======
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
-from telegram.error import BadRequest
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 
 import database
 import file_parser
 import ai_service
 import branded_output
 from locales import T
-<<<<<<< HEAD
 from config import ADMIN_ID, SUPPORT_USERNAME, BOT_USERNAME, MAX_FILE_SIZE_MB, TEMP_MESSAGE_TTL
-=======
-from config import ADMIN_ID, SUPPORT_USERNAME, MAX_FILE_SIZE_MB, TEMP_MESSAGE_TTL
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +34,6 @@ def tr(context: ContextTypes.DEFAULT_TYPE, user_id: int, key: str, **kwargs) -> 
     return text.format(**kwargs) if kwargs else text
 
 
-<<<<<<< HEAD
 def tr_lang(lang: str, key: str, **kwargs) -> str:
     """tr() ning versiyasi — boshqa foydalanuvchiga (masalan referrerga)
     xabar yozganda, uning tilini to'g'ridan-to'g'ri berish uchun."""
@@ -55,8 +41,6 @@ def tr_lang(lang: str, key: str, **kwargs) -> str:
     return text.format(**kwargs) if kwargs else text
 
 
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 async def _delete_job(context: ContextTypes.DEFAULT_TYPE):
     data = context.job.data
     try:
@@ -71,18 +55,13 @@ def schedule_delete(context: ContextTypes.DEFAULT_TYPE, chat_id, message_id, del
 
 
 # ---------------------------------------------------------------------------
-<<<<<<< HEAD
 # /start, referral payload, language selection
-=======
-# /start and language selection
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 # ---------------------------------------------------------------------------
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     database.upsert_user(user.id, user.username, user.full_name)
     context.user_data.clear()
-<<<<<<< HEAD
 
     # --- Referral havolasi orqali kirgan bo'lsa (t.me/bot?start=ref_123) ---
     if context.args and context.args[0].startswith("ref_"):
@@ -102,8 +81,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 except Exception:
                     logger.warning("Referrer %s ga xabar yuborilmadi", referrer_id)
 
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     kb = InlineKeyboardMarkup(
         [
             [
@@ -125,7 +102,6 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ---------------------------------------------------------------------------
-<<<<<<< HEAD
 # Asosiy menyu
 # ---------------------------------------------------------------------------
 
@@ -158,35 +134,21 @@ async def show_main_menu_message(update: Update, context: ContextTypes.DEFAULT_T
 
 
 # ---------------------------------------------------------------------------
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 # Callback router
 # ---------------------------------------------------------------------------
 
 async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-<<<<<<< HEAD
     await query.answer()
-=======
-    try:
-        await query.answer()
-    except BadRequest as e:
-        if "Query is too old" not in str(e):
-            raise
-        return
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     data = query.data
     user_id = update.effective_user.id
 
     if data.startswith("lang:"):
         await handle_lang(update, context, data.split(":", 1)[1])
-<<<<<<< HEAD
     elif data == "menu":
         await show_main_menu(query, context, user_id)
     elif data.startswith("menu:"):
         await handle_menu(update, context, data.split(":", 1)[1])
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     elif data.startswith("scope:"):
         await handle_scope(update, context, data.split(":", 1)[1])
     elif data.startswith("topicpick:"):
@@ -207,7 +169,6 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_output(update, context, content, fmt)
     elif data == "regen":
         await handle_regenerate(update, context)
-<<<<<<< HEAD
     elif data == "retry_gen":
         await handle_retry_generation(update, context)
     elif data == "back_to_content":
@@ -220,17 +181,6 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_back(update, context)
     elif data.startswith("buy:"):
         await handle_buy(update, context, data.split(":", 1)[1])
-=======
-    elif data == "back_to_content":
-        query2 = update.callback_query
-        questions = context.user_data.get("quiz_result", [])
-        if questions:
-            await show_content_choice(query2, context, user_id, len(questions))
-        else:
-            await query2.edit_message_text(tr(context, user_id, "nothing_to_export"))
-    elif data == "back":
-        await handle_back(update, context)
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     elif data.startswith("admin:"):
         await handle_admin_callback(update, context, data.split(":", 1)[1])
 
@@ -240,7 +190,6 @@ async def handle_lang(update: Update, context: ContextTypes.DEFAULT_TYPE, lang: 
     context.user_data["language"] = lang
     database.set_language(user_id, lang)
     query = update.callback_query
-<<<<<<< HEAD
     await show_main_menu(query, context, user_id)
 
 
@@ -282,9 +231,6 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, item: 
         await query.edit_message_text(
             "Tilni tanlang / Выберите язык / Choose language:", reply_markup=kb
         )
-=======
-    await query.edit_message_text(tr(context, user_id, "welcome"))
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 
 
 # ---------------------------------------------------------------------------
@@ -339,16 +285,11 @@ async def on_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
-<<<<<<< HEAD
     # Admin: xabar tarqatish (broadcast)
-=======
-    # Admin broadcast flow
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     if context.user_data.get("awaiting_broadcast") and user_id == ADMIN_ID:
         await do_broadcast(update, context)
         return
 
-<<<<<<< HEAD
     # Admin: promokod yaratish
     if context.user_data.get("awaiting_admin_promo") and user_id == ADMIN_ID:
         await do_create_promo(update, context)
@@ -360,8 +301,6 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await do_redeem_promo(update, context)
         return
 
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     # Custom question count flow
     if context.user_data.get("awaiting_custom_qty"):
         txt = update.message.text.strip()
@@ -550,7 +489,6 @@ async def handle_difficulty(update: Update, context: ContextTypes.DEFAULT_TYPE, 
 
 
 # ---------------------------------------------------------------------------
-<<<<<<< HEAD
 # Answer format + generation (V3: kvota tekshiruvi + xatoda qayta urinish)
 # ---------------------------------------------------------------------------
 
@@ -576,16 +514,6 @@ async def _run_generation(query, context, user_id, is_regen=False):
     key = "regenerating" if is_regen else "generating"
     await query.edit_message_text(tr(context, user_id, key))
 
-=======
-# Answer format + generation
-# ---------------------------------------------------------------------------
-
-async def _run_generation(query, context, user_id, is_regen=False):
-    key = "regenerating" if is_regen else "generating"
-    await query.edit_message_text(tr(context, user_id, key))
-
-    lang = lang_of(context, user_id)
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     text = context.user_data.get("raw_text", "")
     qty = context.user_data.get("question_count", 10)
     fmt = context.user_data.get("answer_format", "ABCD")
@@ -594,7 +522,6 @@ async def _run_generation(query, context, user_id, is_regen=False):
 
     try:
         result = await asyncio.to_thread(
-<<<<<<< HEAD
             ai_service.generate_quiz, text, qty, fmt,
             scope_note=scope_detail, difficulty=difficulty,
         )
@@ -607,19 +534,10 @@ async def _run_generation(query, context, user_id, is_regen=False):
             tr(context, user_id, "ai_error", error=str(e)),
             reply_markup=InlineKeyboardMarkup(buttons),
         )
-=======
-            ai_service.generate_quiz, text, lang, qty, fmt,
-            scope_note=scope_detail, difficulty=difficulty,
-        )
-    except Exception as e:
-        logger.exception("AI generate error")
-        await query.edit_message_text(tr(context, user_id, "ai_error", error=str(e)))
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
         return
 
     questions = result.get("questions", [])
     if not questions:
-<<<<<<< HEAD
         buttons = [[InlineKeyboardButton(tr(context, user_id, "retry_btn"), callback_data="retry_gen")]]
         await query.edit_message_text(
             tr(context, user_id, "generation_failed"),
@@ -631,13 +549,6 @@ async def _run_generation(query, context, user_id, is_regen=False):
     # Test MUVAFFAQIYATLI tuzilgandan keyingina kvota va statistika yangilanadi.
     database.log_quiz(user_id, len(questions), context.user_data.get("source_type", "matn"), difficulty)
     database.consume_quota(user_id)
-=======
-        await query.edit_message_text(tr(context, user_id, "generation_failed"))
-        return
-
-    context.user_data["quiz_result"] = questions
-    database.log_quiz(user_id, len(questions), context.user_data.get("source_type", "matn"), difficulty)
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 
     await show_content_choice(query, context, user_id, len(questions))
 
@@ -658,7 +569,6 @@ async def handle_regenerate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _run_generation(query, context, user_id, is_regen=True)
 
 
-<<<<<<< HEAD
 async def handle_retry_generation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """'🔄 Qayta urinish' tugmasi — oldingi urinish texnik xato bergani uchun
     kvota hali ishlatilmagan, shuning uchun oddiy regeneratsiya kabi ishlaydi."""
@@ -670,8 +580,6 @@ async def handle_retry_generation(update: Update, context: ContextTypes.DEFAULT_
     await _run_generation(query, context, user_id, is_regen=True)
 
 
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 async def show_content_choice(query, context, user_id, count):
     buttons = [
         [
@@ -681,21 +589,10 @@ async def show_content_choice(query, context, user_id, count):
         [InlineKeyboardButton(tr(context, user_id, "content_both"), callback_data="content:both")],
         [InlineKeyboardButton(tr(context, user_id, "regenerate_btn"), callback_data="regen")],
     ]
-<<<<<<< HEAD
     await query.edit_message_text(
         tr(context, user_id, "generated_ok", count=count),
         reply_markup=InlineKeyboardMarkup(buttons),
     )
-=======
-    try:
-        await query.edit_message_text(
-            tr(context, user_id, "generated_ok", count=count),
-            reply_markup=InlineKeyboardMarkup(buttons),
-        )
-    except BadRequest as e:
-        if "Message is not modified" not in str(e):
-            raise
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 
 
 # ---------------------------------------------------------------------------
@@ -802,7 +699,6 @@ async def handle_output(update: Update, context: ContextTypes.DEFAULT_TYPE, cont
 
 
 # ---------------------------------------------------------------------------
-<<<<<<< HEAD
 # V3: Obuna (Telegram Stars)
 # ---------------------------------------------------------------------------
 
@@ -932,8 +828,6 @@ async def do_redeem_promo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ---------------------------------------------------------------------------
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 # Admin panel
 # ---------------------------------------------------------------------------
 
@@ -944,10 +838,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📊 Statistika", callback_data="admin:stats")],
         [InlineKeyboardButton("👥 Foydalanuvchilar", callback_data="admin:users")],
         [InlineKeyboardButton("📢 Xabar yuborish", callback_data="admin:broadcast")],
-<<<<<<< HEAD
         [InlineKeyboardButton("🎟 Promokod yaratish", callback_data="admin:promo_create")],
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
         [InlineKeyboardButton("⚙️ Sozlamalar", callback_data="admin:settings")],
     ]
     await update.message.reply_text("🔐 Admin panel", reply_markup=InlineKeyboardMarkup(buttons))
@@ -968,35 +859,24 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
             "📊 *Statistika*\n\n"
             f"👥 Jami foydalanuvchilar: {s['total_users']}\n"
             f"📝 Jami yaratilgan testlar: {s['total_tests']}\n"
-<<<<<<< HEAD
             f"🟢 Bugun faol: {s['active_today']}\n"
             f"⭐ Jami Stars daromad: {s['total_stars']}\n\n"
             f"🏆 Top foydalanuvchilar:\n{top}"
         )
         await query.edit_message_text(text, parse_mode="Markdown")
-=======
-            f"🟢 Bugun faol: {s['active_today']}\n\n"
-            f"🏆 Top foydalanuvchilar:\n{top}"
-        )
-        await query.edit_message_text(text)
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     elif action == "users":
         ids = database.all_user_ids()
         await query.edit_message_text(f"👥 Jami {len(ids)} ta foydalanuvchi ro'yxatdan o'tgan.")
     elif action == "broadcast":
         context.user_data["awaiting_broadcast"] = True
         await query.edit_message_text("📢 Yubormoqchi bo'lgan xabaringizni yozing:")
-<<<<<<< HEAD
     elif action == "promo_create":
         context.user_data["awaiting_admin_promo"] = True
         await query.edit_message_text(tr(context, query.from_user.id, "admin_promo_prompt"))
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
     elif action == "settings":
         await query.edit_message_text(f"⚙️ Sozlamalar\nSupport: {SUPPORT_USERNAME}\nAdmin ID: {ADMIN_ID}")
 
 
-<<<<<<< HEAD
 async def do_create_promo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     context.user_data["awaiting_admin_promo"] = False
@@ -1013,8 +893,6 @@ async def do_create_promo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-=======
->>>>>>> 043a65b44659b22132508b88491bc6f3483f3db5
 async def do_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["awaiting_broadcast"] = False
     text = update.message.text
